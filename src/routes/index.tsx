@@ -13,9 +13,8 @@ function Landing() {
     <div className="bg-bg text-fg">
       <header className="sticky top-0 z-20 border-b border-border/80 bg-bg/90 backdrop-blur">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
-          <a href="#inicio" className="flex items-center gap-2 text-primary">
-            <AsgardMark className="h-10 w-10" />
-            <span className="font-display text-sm tracking-[0.2em] text-cream">ASGARD</span>
+          <a href="#inicio" className="flex items-center">
+            <AsgardMark className="h-12 w-auto max-w-[180px]" />
           </a>
           <nav className="hidden items-center gap-6 text-xs tracking-[0.16em] text-muted uppercase md:flex">
             <a href="#servicios" className="hover:text-cream">Servicios</a>
@@ -39,14 +38,11 @@ function Landing() {
         ) : null}
       </header>
 
-      <section id="inicio" className="mx-auto max-w-3xl px-4 py-20 text-center">
-        <div className="mb-6 flex justify-center text-primary">
-          <AsgardMark className="h-24 w-24" />
+      <section id="inicio" className="mx-auto max-w-3xl px-4 py-16 text-center">
+        <div className="mb-6 flex justify-center">
+          <AsgardMark className="h-44 w-auto max-w-[280px] md:h-56 md:max-w-[340px]" />
         </div>
-        <p className="font-display text-xs tracking-[0.4em] text-muted">ESTUDIO</p>
-        <h1 className="mt-1 font-display text-5xl font-semibold tracking-[0.18em] text-cream">ASGARD</h1>
-        <p className="mt-4 text-xs tracking-[0.28em] text-muted uppercase">Corte · Barba · Perfilado</p>
-        <p className="mx-auto mt-6 max-w-md text-base leading-relaxed text-muted">
+        <p className="mx-auto mt-2 max-w-md text-base leading-relaxed text-muted">
           Elevamos tu estilo en Alta Gracia. Cortes con detalle. Tres barberos, un mismo criterio.
         </p>
         <div className="mt-8 flex flex-wrap justify-center gap-3">
@@ -97,8 +93,8 @@ function Landing() {
 
       <section id="nosotros" className="border-t border-border px-4 py-16">
         <div className="mx-auto max-w-2xl text-center">
-          <div className="mb-6 flex justify-center text-primary">
-            <AsgardMark className="h-16 w-16" />
+          <div className="mb-6 flex justify-center">
+            <AsgardMark className="h-20 w-auto max-w-[200px]" />
           </div>
           <h2 className="font-display text-3xl tracking-wide text-cream">Somos un equipo, no solo una barbería</h2>
           <p className="mt-4 text-sm leading-relaxed text-muted">

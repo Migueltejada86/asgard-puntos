@@ -3,6 +3,43 @@ import { authMiddleware } from "@/lib/auth/middleware";
 import { getSql } from "@/lib/db";
 import { DEMO } from "@/lib/demo";
 
+export type DemoKind = "barber" | (typeof DEMO.clients)[number]["id"];
+
+export const demoEnter = createServerFn({ method: "POST" })
+  .validator((kind: DemoKind) => kind)
+  .handler(async ({ data: kind }) => {
+    const pack =
+      kind === "barber" ? DEMO.barber : DEMO.clients.find((c) => c.id === kind);
+    if (!pack) throw new Error("Cuenta de prueba inválida");
+    const { auth } = await import("@/lib/auth/server");
+    const { getRequest } = await import("@tanstack/react-start/server");
+    const headers = getRequest()?.headers;
+    const body = { email: pack.email, password: DEMO.password, name: pack.name };
+    try {
+      await auth.api.signInEmail({
+        body: { email: body.email, password: body.password },
+        headers,
+      });
+      return { ok: true as const };
+    } catch {
+      /* create on first use */
+    }
+    try {
+      await auth.api.signUpEmail({ body, headers });
+      return { ok: true as const };
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "";
+      if (/already|exist/i.test(msg)) {
+        await auth.api.signInEmail({
+          body: { email: body.email, password: body.password },
+          headers,
+        });
+        return { ok: true as const };
+      }
+      throw new Error(msg || "No se pudo entrar con la cuenta de prueba");
+    }
+  });
+
 export const ACTIONS = [
   { id: "corte", label: "Corte de pelo", points: 20 },
   { id: "combo", label: "Corte + barba", points: 30 },

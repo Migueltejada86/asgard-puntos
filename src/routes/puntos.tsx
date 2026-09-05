@@ -26,7 +26,7 @@ function PuntosPage() {
   if (isPending) {
     return (
       <div className="flex min-h-dvh items-center justify-center bg-bg text-cream">
-        <AsgardMark className="h-16 w-16 animate-pulse" />
+        <AsgardMark className="h-20 w-auto max-w-[200px] animate-pulse" />
       </div>
     );
   }

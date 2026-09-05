@@ -4,6 +4,7 @@ import { GROK_PROVIDERS, authClient, authEnabled, signIn } from "@/lib/auth/clie
 import { AsgardMark } from "@/components/asgard-mark";
 import { Card, Field, GoldBtn, GhostBtn, inputClass } from "@/components/shell";
 import { DEMO, type DemoClient } from "@/lib/demo";
+import { demoEnter } from "@/lib/loyalty-api";
 
 type Search = { rol?: "cliente" | "barbero" };
 
@@ -26,16 +27,8 @@ function Login() {
 
   if (rol) sessionStorage.setItem("asgard-rol", rol);
 
-  async function signInOrUp(pack: { email: string; name: string }) {
-    const signed = await authClient.signIn.email({ email: pack.email, password: DEMO.password });
-    if (signed.error) {
-      const created = await authClient.signUp.email({
-        email: pack.email,
-        password: DEMO.password,
-        name: pack.name,
-      });
-      if (created.error) throw new Error(created.error.message || "No se pudo crear la cuenta de prueba");
-    }
+  async function signInOrUp(kind: "barber" | DemoClient["id"]) {
+    await demoEnter({ data: kind });
     window.location.assign("/puntos");
   }
 
@@ -46,7 +39,7 @@ function Login() {
     sessionStorage.setItem("asgard-rol", "barbero");
     sessionStorage.removeItem("asgard-dni");
     try {
-      await signInOrUp(DEMO.barber);
+      await signInOrUp("barber");
     } catch (ex) {
       setErr(ex instanceof Error ? ex.message : "Error");
       setBusy(false);
@@ -60,7 +53,7 @@ function Login() {
     sessionStorage.setItem("asgard-rol", "cliente");
     sessionStorage.setItem("asgard-dni", c.dni);
     try {
-      await signInOrUp({ email: c.email, name: c.name });
+      await signInOrUp(c.id);
     } catch (ex) {
       setErr(ex instanceof Error ? ex.message : "Error");
       setBusy(false);
@@ -89,8 +82,8 @@ function Login() {
   return (
     <div className="mx-auto flex min-h-dvh max-w-md flex-col bg-bg px-5 py-10 text-fg">
       <div className="mb-8 text-center text-primary">
-        <AsgardMark className="mx-auto h-14 w-14" />
-        <h1 className="mt-3 font-display text-2xl tracking-[0.18em] text-cream">ASGARD PUNTOS</h1>
+        <AsgardMark className="mx-auto h-28 w-auto max-w-[240px]" />
+        <h1 className="mt-3 font-display text-xl tracking-[0.18em] text-cream">PUNTOS</h1>
         <p className="mt-1 text-sm text-muted">Mini base de prueba · 4 clientes</p>
       </div>
 
