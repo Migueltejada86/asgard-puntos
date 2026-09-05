@@ -1,0 +1,14 @@
+node_modules/
+.output/
+.vinxi/
+.nitro/
+dist/
+.env
+.env.local
+.DS_Store
+*.log
+screenshots/
+artifacts/
+attachments/
+html_viejos/
+.vercel/
