@@ -3,16 +3,18 @@ import { useEffect, useState } from "react";
 import { RedirectToSignIn, UserButton } from "@/lib/auth/gates";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { AsgardMark } from "@/components/asgard-mark";
-import { Card, Field, GhostBtn, GoldBtn, Shell, inputClass } from "@/components/shell";
+import { Card, Field, GoldBtn, Shell, inputClass } from "@/components/shell";
 import { DEMO } from "@/lib/demo";
 import {
   ACTIONS,
   addPoints,
+  claimPrize,
   completeOnboarding,
   deliverClaim,
   getBarberHome,
   getClientHome,
   getMyProfile,
+  redeemForClient,
   type ClientRow,
   type ClaimRow,
   type PrizeRow,
@@ -162,14 +164,17 @@ function BarberDesk({
 }) {
   const [clients, setClients] = useState<ClientRow[]>([]);
   const [claims, setClaims] = useState<ClaimRow[]>([]);
+  const [prizes, setPrizes] = useState<PrizeRow[]>([]);
   const [selected, setSelected] = useState<ClientRow | null>(null);
   const [busy, setBusy] = useState(false);
   const [code, setCode] = useState("");
+  const [ticket, setTicket] = useState("");
 
   async function load() {
     const data = await getBarberHome();
     setClients(data.clients);
     setClaims(data.claims);
+    setPrizes(data.prizes);
     if (selected) {
       setSelected(data.clients.find((c) => c.id === selected.id) ?? null);
     }
@@ -186,6 +191,21 @@ function BarberDesk({
     try {
       const next = await addPoints({ data: { dni: selected.dni, delta: action.points, label: action.label } });
       setSelected(next);
+      await load();
+    } catch (ex) {
+      onError(ex instanceof Error ? ex.message : "Error");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function redeem(prize: PrizeRow) {
+    if (!selected) return;
+    setBusy(true);
+    onError("");
+    try {
+      const res = await redeemForClient({ data: { dni: selected.dni, prizeId: prize.id } });
+      setTicket(`${res.prizeName} · código ${res.code}`);
       await load();
     } catch (ex) {
       onError(ex instanceof Error ? ex.message : "Error");
@@ -253,6 +273,28 @@ function BarberDesk({
               </button>
             ))}
           </div>
+          <p className="pt-2 text-xs text-muted">Canjear premio (resta puntos y genera código)</p>
+          <div className="space-y-2">
+            {prizes.map((p) => {
+              const ok = selected.points >= p.cost;
+              return (
+                <button
+                  key={p.id}
+                  type="button"
+                  disabled={busy || !ok}
+                  onClick={() => void redeem(p)}
+                  className="flex min-h-12 w-full items-center justify-between rounded-md border border-border bg-elevated px-3 text-left text-sm text-cream hover:border-primary disabled:opacity-40"
+                >
+                  <span>
+                    <span className="block">{p.name}</span>
+                    <span className="text-xs text-muted">{p.detail}</span>
+                  </span>
+                  <span className="text-primary">{p.cost} pts</span>
+                </button>
+              );
+            })}
+          </div>
+          {ticket ? <p className="text-sm text-primary">{ticket}</p> : null}
         </Card>
       ) : (
         <p className="mt-4 text-sm text-muted">Tocá un cliente para sumarle puntos.</p>
@@ -281,12 +323,31 @@ function BarberDesk({
 function ClientDesk() {
   const [data, setData] = useState<Awaited<ReturnType<typeof getClientHome>> | null>(null);
   const [err, setErr] = useState("");
+  const [ticket, setTicket] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  async function load() {
+    const next = await getClientHome();
+    setData(next);
+  }
 
   useEffect(() => {
-    void getClientHome()
-      .then(setData)
-      .catch((e) => setErr(e instanceof Error ? e.message : "Error"));
+    void load().catch((e) => setErr(e instanceof Error ? e.message : "Error"));
   }, []);
+
+  async function redeem(prizeId: string) {
+    setBusy(true);
+    setErr("");
+    try {
+      const res = await claimPrize({ data: prizeId });
+      setTicket(`${res.prizeName} · código ${res.code}`);
+      await load();
+    } catch (ex) {
+      setErr(ex instanceof Error ? ex.message : "Error");
+    } finally {
+      setBusy(false);
+    }
+  }
 
   if (!data) {
     return (
@@ -306,23 +367,35 @@ function ClientDesk() {
         <p className="mt-6 font-display text-5xl leading-none">{data.client.points}</p>
         <p className="mt-1 text-sm opacity-80">puntos</p>
       </div>
+      {err ? <p className="mt-3 text-sm text-danger">{err}</p> : null}
+      {ticket ? <p className="mt-3 text-sm text-primary">{ticket}</p> : null}
       {next ? (
         <p className="mt-4 text-sm text-muted">
           Te faltan {next.cost - data.client.points} pts para {next.name}.
         </p>
       ) : (
-        <p className="mt-4 text-sm text-ok">Ya podés canjear un premio en el local.</p>
+        <p className="mt-4 text-sm text-primary">Ya podés canjear un premio en el local.</p>
       )}
       <div className="mt-6 space-y-2">
-        {data.prizes.map((p: PrizeRow) => (
-          <div key={p.id} className="flex items-center justify-between rounded-md border border-border bg-surface px-4 py-3">
-            <span>
-              <span className="block text-cream">{p.name}</span>
-              <span className="text-xs text-muted">{p.detail}</span>
-            </span>
-            <span className="text-sm text-primary">{p.cost} pts</span>
-          </div>
-        ))}
+        {data.prizes.map((p: PrizeRow) => {
+          const ok = data.client.points >= p.cost;
+          return (
+            <div key={p.id} className="flex items-center justify-between gap-3 rounded-md border border-border bg-surface px-4 py-3">
+              <span>
+                <span className="block text-cream">{p.name}</span>
+                <span className="text-xs text-muted">{p.detail}</span>
+              </span>
+              <button
+                type="button"
+                disabled={busy || !ok}
+                onClick={() => void redeem(p.id)}
+                className="shrink-0 rounded-md border border-primary px-3 py-2 text-xs tracking-wide text-primary uppercase disabled:opacity-40"
+              >
+                {ok ? `${p.cost} pts · canjear` : `${p.cost} pts`}
+              </button>
+            </div>
+          );
+        })}
       </div>
     </Shell>
   );
