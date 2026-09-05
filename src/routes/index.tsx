@@ -17,11 +17,12 @@ function Landing() {
             <AsgardMark className="h-12 w-auto max-w-[180px]" />
           </a>
           <nav className="hidden items-center gap-6 text-xs tracking-[0.16em] text-muted uppercase md:flex">
+            <a href="#inicio" className="hover:text-primary">Inicio</a>
             <a href="#servicios" className="hover:text-cream">Servicios</a>
             <a href="#nosotros" className="hover:text-cream">Nosotros</a>
-            <a href="#reservar" className="hover:text-cream">Reservar</a>
-            <a href="#reservar" className="rounded-md border border-primary px-3 py-2 text-cream">Turno</a>
-            <Link to="/login" search={{ rol: "barbero" }} className="text-cream hover:text-primary">Puntos</Link>
+            <a href="#reservar" className="hover:text-cream">Contacto</a>
+            <a href="#reservar" className="rounded-sm border border-primary px-4 py-2 font-semibold tracking-[0.16em] text-primary hover:bg-primary hover:text-primary-fg">Reservar</a>
+            <Link to="/login" search={{ rol: "barbero" }} className="rounded-sm border border-primary px-4 py-2 font-semibold tracking-[0.16em] text-primary hover:bg-primary hover:text-primary-fg">Puntos</Link>
           </nav>
           <button type="button" className="md:hidden" aria-label="Menú" onClick={() => setOpen((v) => !v)}>
             <span className="block h-0.5 w-6 bg-cream" />
@@ -30,26 +31,37 @@ function Landing() {
           </button>
         </div>
         {open ? (
-          <div className="flex flex-col gap-3 border-t border-border px-4 py-4 text-sm md:hidden">
+          <div className="flex flex-col gap-3 border-t border-border px-4 py-4 text-sm uppercase tracking-[0.14em] md:hidden">
+            <a href="#inicio" onClick={() => setOpen(false)}>Inicio</a>
             <a href="#servicios" onClick={() => setOpen(false)}>Servicios</a>
             <a href="#nosotros" onClick={() => setOpen(false)}>Nosotros</a>
             <a href="#reservar" onClick={() => setOpen(false)}>Reservar</a>
+            <Link to="/login" search={{ rol: "barbero" }} onClick={() => setOpen(false)} className="text-primary">Puntos</Link>
           </div>
         ) : null}
       </header>
 
-      <section id="inicio" className="mx-auto max-w-3xl px-4 py-16 text-center">
-        <div className="mb-6 flex justify-center">
-          <AsgardMark className="h-44 w-auto max-w-[280px] md:h-56 md:max-w-[340px]" />
+      <section id="inicio" className="mx-auto max-w-3xl px-4 py-16 text-center md:py-24">
+        <div className="mb-8 flex justify-center">
+          <AsgardMark className="h-44 w-auto max-w-[260px] drop-shadow-[0_0_25px_rgba(201,168,108,0.3)] md:h-56 md:max-w-[280px]" />
         </div>
-        <p className="mx-auto mt-2 max-w-md text-base leading-relaxed text-muted">
-          Elevamos tu estilo en Alta Gracia. Cortes con detalle. Tres barberos, un mismo criterio.
+        <div className="mb-8 flex flex-wrap justify-center gap-2 text-[12px] tracking-[0.2em] text-muted uppercase">
+          <span>Corte</span>
+          <span className="text-primary">•</span>
+          <span>Barba</span>
+          <span className="text-primary">•</span>
+          <span>Perfilado</span>
+        </div>
+        <p className="mx-auto max-w-md text-[17px] leading-relaxed text-muted">
+          Elevamos tu estilo en Alta Gracia.
+          <br />
+          Cortes con detalle · Tres barberos, un mismo criterio.
         </p>
-        <div className="mt-8 flex flex-wrap justify-center gap-3">
-          <a href="#reservar" className="inline-flex min-h-12 items-center rounded-md bg-primary px-6 font-semibold tracking-wide text-primary-fg">
+        <div className="mt-10 flex flex-wrap justify-center gap-4">
+          <a href="#reservar" className="inline-flex min-h-12 items-center rounded-sm bg-gradient-to-br from-primary to-[#a68b4b] px-8 text-[13px] font-semibold tracking-[0.2em] text-primary-fg uppercase">
             Reservar turno
           </a>
-          <Link to="/login" search={{ rol: "barbero" }} className="inline-flex min-h-12 items-center rounded-md border border-primary/50 px-6 font-medium text-cream">
+          <Link to="/login" search={{ rol: "barbero" }} className="inline-flex min-h-12 items-center rounded-sm border border-primary/40 px-8 text-[13px] font-semibold tracking-[0.2em] text-cream uppercase hover:border-primary hover:text-primary">
             Puntos del local
           </Link>
         </div>
