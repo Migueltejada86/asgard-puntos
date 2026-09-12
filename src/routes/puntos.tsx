@@ -1,20 +1,22 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { Cake, Clock, Scissors } from "lucide-react";
 import { RedirectToSignIn, UserButton } from "@/lib/auth/gates";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { AsgardMark } from "@/components/asgard-mark";
 import { Card, Field, GoldBtn, Shell, inputClass } from "@/components/shell";
+import { BarberNav } from "@/components/barber-nav";
+import { AskLocationButton, NearShopBanner } from "@/components/near-shop";
 import { DEMO } from "@/lib/demo";
+import { SHOP } from "@/lib/shop";
 import {
   ACTIONS,
   addPoints,
-  claimPrize,
   completeOnboarding,
   deliverClaim,
   getBarberHome,
   getClientHome,
   getMyProfile,
-  redeemForClient,
   type ClientRow,
   type ClaimRow,
   type PrizeRow,
@@ -28,7 +30,7 @@ function PuntosPage() {
   if (isPending) {
     return (
       <div className="flex min-h-dvh items-center justify-center bg-bg text-cream">
-        <AsgardMark className="h-20 w-auto max-w-[200px] animate-pulse" />
+        <AsgardMark className="h-16 w-16 animate-pulse" />
       </div>
     );
   }
@@ -164,17 +166,14 @@ function BarberDesk({
 }) {
   const [clients, setClients] = useState<ClientRow[]>([]);
   const [claims, setClaims] = useState<ClaimRow[]>([]);
-  const [prizes, setPrizes] = useState<PrizeRow[]>([]);
   const [selected, setSelected] = useState<ClientRow | null>(null);
   const [busy, setBusy] = useState(false);
   const [code, setCode] = useState("");
-  const [ticket, setTicket] = useState("");
 
   async function load() {
     const data = await getBarberHome();
     setClients(data.clients);
     setClaims(data.claims);
-    setPrizes(data.prizes);
     if (selected) {
       setSelected(data.clients.find((c) => c.id === selected.id) ?? null);
     }
@@ -199,21 +198,6 @@ function BarberDesk({
     }
   }
 
-  async function redeem(prize: PrizeRow) {
-    if (!selected) return;
-    setBusy(true);
-    onError("");
-    try {
-      const res = await redeemForClient({ data: { dni: selected.dni, prizeId: prize.id } });
-      setTicket(`${res.prizeName} · código ${res.code}`);
-      await load();
-    } catch (ex) {
-      onError(ex instanceof Error ? ex.message : "Error");
-    } finally {
-      setBusy(false);
-    }
-  }
-
   async function deliver(e: React.FormEvent) {
     e.preventDefault();
     onError("");
@@ -227,7 +211,7 @@ function BarberDesk({
   }
 
   return (
-    <Shell title="Puntos" footer={<div className="border-t border-border px-4 py-3"><UserButton /></div>}>
+    <Shell title="Puntos" footer={<div className="border-t border-border px-4 py-3"><BarberNav /><UserButton /></div>}>
       <p className="mb-3 text-xs tracking-[0.2em] text-muted uppercase">{profile.shopName} · {profile.displayName}</p>
       {banner ? <p className="mb-3 text-sm text-danger">{banner}</p> : null}
 
@@ -273,28 +257,6 @@ function BarberDesk({
               </button>
             ))}
           </div>
-          <p className="pt-2 text-xs text-muted">Canjear premio (resta puntos y genera código)</p>
-          <div className="space-y-2">
-            {prizes.map((p) => {
-              const ok = selected.points >= p.cost;
-              return (
-                <button
-                  key={p.id}
-                  type="button"
-                  disabled={busy || !ok}
-                  onClick={() => void redeem(p)}
-                  className="flex min-h-12 w-full items-center justify-between rounded-md border border-border bg-elevated px-3 text-left text-sm text-cream hover:border-primary disabled:opacity-40"
-                >
-                  <span>
-                    <span className="block">{p.name}</span>
-                    <span className="text-xs text-muted">{p.detail}</span>
-                  </span>
-                  <span className="text-primary">{p.cost} pts</span>
-                </button>
-              );
-            })}
-          </div>
-          {ticket ? <p className="text-sm text-primary">{ticket}</p> : null}
         </Card>
       ) : (
         <p className="mt-4 text-sm text-muted">Tocá un cliente para sumarle puntos.</p>
@@ -323,31 +285,12 @@ function BarberDesk({
 function ClientDesk() {
   const [data, setData] = useState<Awaited<ReturnType<typeof getClientHome>> | null>(null);
   const [err, setErr] = useState("");
-  const [ticket, setTicket] = useState("");
-  const [busy, setBusy] = useState(false);
-
-  async function load() {
-    const next = await getClientHome();
-    setData(next);
-  }
 
   useEffect(() => {
-    void load().catch((e) => setErr(e instanceof Error ? e.message : "Error"));
+    void getClientHome()
+      .then(setData)
+      .catch((e) => setErr(e instanceof Error ? e.message : "Error"));
   }, []);
-
-  async function redeem(prizeId: string) {
-    setBusy(true);
-    setErr("");
-    try {
-      const res = await claimPrize({ data: prizeId });
-      setTicket(`${res.prizeName} · código ${res.code}`);
-      await load();
-    } catch (ex) {
-      setErr(ex instanceof Error ? ex.message : "Error");
-    } finally {
-      setBusy(false);
-    }
-  }
 
   if (!data) {
     return (
@@ -358,45 +301,80 @@ function ClientDesk() {
   }
 
   const next = data.prizes.find((p: PrizeRow) => p.cost > data.client.points);
+  const when = data.upcoming
+    ? new Date(data.upcoming.startsAt).toLocaleTimeString("es-AR", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+        timeZone: "America/Argentina/Buenos_Aires",
+      })
+    : "";
 
   return (
     <Shell title="Mis puntos" footer={<div className="border-t border-border px-4 py-3"><UserButton /></div>}>
-      <div className="asgard-card rounded-lg p-6 text-primary-fg">
+      <NearShopBanner />
+      <div className="mt-3">
+        <AskLocationButton />
+      </div>
+      {data.birthdayToday ? (
+        <Card className="mt-4 flex items-start gap-3 border-primary/40">
+          <Cake className="mt-0.5 size-5 text-primary" />
+          <p className="text-sm text-cream">Feliz cumple. Hoy el local te espera cuando quieras.</p>
+        </Card>
+      ) : null}
+      {data.upcoming ? (
+        <Card className="mt-4 flex items-start gap-3">
+          <Clock className="mt-0.5 size-5 text-primary" />
+          <div>
+            <p className="text-xs tracking-[0.16em] text-primary uppercase">Tu turno</p>
+            <p className="mt-1 text-cream">
+              {data.upcoming.service} con {data.upcoming.barber} a las {when}
+            </p>
+          </div>
+        </Card>
+      ) : null}
+      {data.recutDue ? (
+        <Card className="mt-4 flex items-start gap-3">
+          <Scissors className="mt-0.5 size-5 text-primary" />
+          <div>
+            <p className="text-xs tracking-[0.16em] text-primary uppercase">Próximo corte</p>
+            <p className="mt-1 text-sm text-cream">
+              Ya pasaron {SHOP.recutDays} días. Reservá el siguiente
+              {data.preferredBarber ? ` con ${data.preferredBarber}` : ""}.
+            </p>
+            <a href="/#reservar" className="mt-3 inline-flex min-h-11 items-center text-sm text-primary">
+              Reservar turno
+            </a>
+          </div>
+        </Card>
+      ) : null}
+      <div className="asgard-card mt-4 rounded-lg p-6 text-primary-fg">
         <p className="text-xs tracking-[0.2em] uppercase opacity-80">{data.profile.shopName}</p>
         <p className="mt-2 font-display text-2xl">{data.client.name}</p>
         <p className="mt-6 font-display text-5xl leading-none">{data.client.points}</p>
         <p className="mt-1 text-sm opacity-80">puntos</p>
       </div>
-      {err ? <p className="mt-3 text-sm text-danger">{err}</p> : null}
-      {ticket ? <p className="mt-3 text-sm text-primary">{ticket}</p> : null}
       {next ? (
         <p className="mt-4 text-sm text-muted">
           Te faltan {next.cost - data.client.points} pts para {next.name}.
         </p>
       ) : (
-        <p className="mt-4 text-sm text-primary">Ya podés canjear un premio en el local.</p>
+        <p className="mt-4 text-sm text-ok">Ya podés canjear un premio en el local.</p>
       )}
       <div className="mt-6 space-y-2">
-        {data.prizes.map((p: PrizeRow) => {
-          const ok = data.client.points >= p.cost;
-          return (
-            <div key={p.id} className="flex items-center justify-between gap-3 rounded-md border border-border bg-surface px-4 py-3">
-              <span>
-                <span className="block text-cream">{p.name}</span>
-                <span className="text-xs text-muted">{p.detail}</span>
-              </span>
-              <button
-                type="button"
-                disabled={busy || !ok}
-                onClick={() => void redeem(p.id)}
-                className="shrink-0 rounded-md border border-primary px-3 py-2 text-xs tracking-wide text-primary uppercase disabled:opacity-40"
-              >
-                {ok ? `${p.cost} pts · canjear` : `${p.cost} pts`}
-              </button>
-            </div>
-          );
-        })}
+        {data.prizes.map((p: PrizeRow) => (
+          <div key={p.id} className="flex items-center justify-between rounded-md border border-border bg-surface px-4 py-3">
+            <span>
+              <span className="block text-cream">{p.name}</span>
+              <span className="text-xs text-muted">{p.detail}</span>
+            </span>
+            <span className="text-sm text-primary">{p.cost} pts</span>
+          </div>
+        ))}
       </div>
+      <a href="/placas" className="mt-6 inline-flex min-h-11 w-full items-center justify-center rounded-md border border-primary/50 text-sm text-cream">
+        Ver placas QR
+      </a>
     </Shell>
   );
 }

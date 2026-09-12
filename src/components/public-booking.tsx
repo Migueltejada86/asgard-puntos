@@ -8,6 +8,7 @@ import {
   type BarberName,
   type SlotRow,
 } from "@/lib/booking-api";
+import { barberWaShort } from "@/lib/shop";
 
 function todayISO() {
   const parts = new Intl.DateTimeFormat("en-CA", {
@@ -30,6 +31,8 @@ export function PublicBooking() {
   const [note, setNote] = useState("");
   const [msg, setMsg] = useState("");
   const [ok, setOk] = useState("");
+  const [waBarber, setWaBarber] = useState("");
+  const [waClient, setWaClient] = useState("");
 
   function load() {
     void listPublicSlots({ data: date })
@@ -52,6 +55,8 @@ export function PublicBooking() {
         e.preventDefault();
         setMsg("");
         setOk("");
+        setWaBarber("");
+        setWaClient("");
         if (!barber || !time) {
           setMsg("Elegí horario y barbero.");
           return;
@@ -60,7 +65,13 @@ export function PublicBooking() {
           data: { date, time, barber, service, name, phone, note },
         })
           .then((r) => {
-            setOk(`Turno confirmado: ${r.service} con ${r.barber} el ${r.date} a las ${r.time}.`);
+            setOk(`Turno confirmado: ${r.service} con ${r.barber} el ${r.date} a las ${r.time}. Le llega a ${r.barber} por WhatsApp.`);
+            if (r.whatsappUrl) {
+              const win = window.open(r.whatsappUrl, "_blank", "noopener,noreferrer");
+              if (win) win.opener = null;
+              else setWaBarber(r.whatsappUrl);
+            }
+            setWaClient(r.clientWhatsappUrl ?? "");
             setName("");
             setPhone("");
             setNote("");
@@ -72,7 +83,7 @@ export function PublicBooking() {
       }}
     >
       <p className="text-sm text-muted">
-        Marcelo, Ulises y Alexis. Un barbero no puede tener dos clientes a la misma hora. Máximo tres turnos en un horario.
+        Marcelo, Ulises y Alexis. El turno se manda al WhatsApp de ese barbero. Un horario = un cliente por silla.
       </p>
       <Field label="Nombre">
         <input className={inputClass} value={name} onChange={(e) => setName(e.target.value)} required maxLength={80} autoComplete="name" />
@@ -157,7 +168,9 @@ export function PublicBooking() {
                   }`}
                 >
                   {b}
-                  {!available ? <span className="block text-[10px]">ocupado</span> : null}
+                  <span className="mt-0.5 block text-[10px] text-muted">
+                    {available ? barberWaShort(b) : "ocupado"}
+                  </span>
                 </button>
               );
             })}
@@ -169,6 +182,26 @@ export function PublicBooking() {
       </Field>
       {msg ? <p className="text-sm text-danger">{msg}</p> : null}
       {ok ? <p className="text-sm text-cream">{ok}</p> : null}
+      {waBarber ? (
+        <a
+          href={waBarber}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex min-h-11 w-full items-center justify-center rounded-md bg-primary text-sm font-semibold text-primary-fg"
+        >
+          Abrir WhatsApp del barbero
+        </a>
+      ) : null}
+      {waClient ? (
+        <a
+          href={waClient}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex min-h-11 w-full items-center justify-center rounded-md border border-primary/50 text-sm text-cream"
+        >
+          Mandar confirmación al cliente
+        </a>
+      ) : null}
       <GoldBtn type="submit">Confirmar reserva</GoldBtn>
     </form>
   );

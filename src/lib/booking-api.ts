@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { authMiddleware } from "@/lib/auth/middleware";
 import { getSql } from "@/lib/db";
+import { BARBER_WHATSAPP, waLink } from "@/lib/shop";
 
 export const SHOP_ID = "asgard";
 
@@ -170,7 +171,20 @@ export const bookPublic = createServerFn({ method: "POST" })
     } catch {
       throw new Error(`${data.barber} ya tiene un turno a las ${data.time}`);
     }
-    return { id, barber: data.barber, time: data.time, date: data.date, service: service.label };
+    const msg = `NUEVO TURNO para ${data.barber}\n${service.label}\n${name}\n${phone}\n${data.date} ${data.time}\nASGARD ESTUDIO — Belisario Roldán 340`;
+    const whatsappUrl = waLink(BARBER_WHATSAPP[data.barber], msg);
+    const clientMsg = `Hola ${name}! Confirmamos tu ${service.label} con ${data.barber} el ${data.date} a las ${data.time} en ASGARD ESTUDIO, Belisario Roldán 340.`;
+    const clientWhatsappUrl = waLink(phone, clientMsg);
+    try {
+      await sql`
+        update clients set preferred_barber = ${data.barber}, phone = ${phone.replace(/\D/g, "")}
+        where shop_id = ${SHOP_ID} and (name = ${name} or phone = ${phone.replace(/\D/g, "")})
+      `;
+    } catch {
+      /* columna phone puede no existir en un deploy viejo */
+    }
+    return { id, barber: data.barber, time: data.time, date: data.date, service: service.label, whatsappUrl, clientWhatsappUrl };
+
   });
 
 export const listSlots = createServerFn({ method: "POST" })
@@ -247,7 +261,9 @@ export const bookSlot = createServerFn({ method: "POST" })
     } catch {
       throw new Error(`${data.barber} ya tiene un turno a las ${data.time}`);
     }
-    return { id, barber: data.barber, time: data.time, date: data.date, service: service.label };
+    const msg = `NUEVO TURNO para ${data.barber}\n${service.label}\n${clientName}\n${phone || "-"}\n${data.date} ${data.time}\nASGARD ESTUDIO — Belisario Roldán 340`;
+    const whatsappUrl = waLink(BARBER_WHATSAPP[data.barber], msg);
+    return { id, barber: data.barber, time: data.time, date: data.date, service: service.label, whatsappUrl };
   });
 
 export const myAppointments = createServerFn({ method: "GET" })
@@ -255,6 +271,7 @@ export const myAppointments = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const me = await myShop(context.userId);
     const sql = await getSql();
+    const mine = BARBERS.find((b) => b.toLowerCase() === me.display_name.trim().toLowerCase());
     const rows =
       me.role === "client"
         ? await sql<{
@@ -270,6 +287,23 @@ export const myAppointments = createServerFn({ method: "GET" })
             from appointments
             where shop_id = ${me.shop_id}
               and client_user_id = ${context.userId}
+              and status <> ${"cancelled"}
+            order by starts_at
+          `
+        : mine
+          ? await sql<{
+            id: string;
+            barber: BarberName;
+            starts_at: string;
+            service: string;
+            client_name: string;
+            client_phone: string;
+            status: AppointmentRow["status"];
+          }>`
+            select id, barber, starts_at, service, client_name, client_phone, status
+            from appointments
+            where shop_id = ${me.shop_id}
+              and barber = ${mine}
               and status <> ${"cancelled"}
             order by starts_at
           `
@@ -312,9 +346,17 @@ export const cancelAppointment = createServerFn({ method: "POST" })
           and status = ${"booked"}
       `;
     } else {
-      await sql`
-        update appointments set status = ${"cancelled"}
-        where id = ${id} and shop_id = ${me.shop_id} and status = ${"booked"}
-      `;
+      const mine = BARBERS.find((b) => b.toLowerCase() === me.display_name.trim().toLowerCase());
+      if (mine) {
+        await sql`
+          update appointments set status = ${"cancelled"}
+          where id = ${id} and shop_id = ${me.shop_id} and barber = ${mine} and status = ${"booked"}
+        `;
+      } else {
+        await sql`
+          update appointments set status = ${"cancelled"}
+          where id = ${id} and shop_id = ${me.shop_id} and status = ${"booked"}
+        `;
+      }
     }
   });

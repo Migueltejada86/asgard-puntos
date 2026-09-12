@@ -6,6 +6,11 @@ export const DEMO = {
     email: "marcelo@asgardestudio.com",
     name: "Marcelo",
   },
+  barbers: [
+    { email: "marcelo@asgardestudio.com", name: "Marcelo", phone: "5493547566940" },
+    { email: "ulises@asgardestudio.com", name: "Ulises", phone: "5493547612770" },
+    { email: "alexis@asgardestudio.com", name: "Alexis", phone: "5493547578371" },
+  ],
   clients: [
     { id: "cli-sofia", email: "sofia@asgardestudio.com", dni: "35901876", name: "Sofía Herrera", points: 180 },
     { id: "cli-braian", email: "braian@asgardestudio.com", dni: "30403722", name: "Braian Cortez", points: 130 },
@@ -15,3 +20,4 @@ export const DEMO = {
 } as const;
 
 export type DemoClient = (typeof DEMO.clients)[number];
+export type DemoBarber = (typeof DEMO.barbers)[number];

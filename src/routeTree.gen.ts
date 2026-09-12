@@ -10,8 +10,11 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AvisosRouteImport } from './routes/avisos'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as PlacasRouteImport } from './routes/placas'
 import { Route as PuntosRouteImport } from './routes/puntos'
+import { Route as TurnosRouteImport } from './routes/turnos'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 
 const IndexRoute = IndexRouteImport.update({
@@ -19,14 +22,29 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AvisosRoute = AvisosRouteImport.update({
+  id: '/avisos',
+  path: '/avisos',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PlacasRoute = PlacasRouteImport.update({
+  id: '/placas',
+  path: '/placas',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PuntosRoute = PuntosRouteImport.update({
   id: '/puntos',
   path: '/puntos',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TurnosRoute = TurnosRouteImport.update({
+  id: '/turnos',
+  path: '/turnos',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
@@ -37,35 +55,69 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/avisos': typeof AvisosRoute
   '/login': typeof LoginRoute
+  '/placas': typeof PlacasRoute
   '/puntos': typeof PuntosRoute
+  '/turnos': typeof TurnosRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/avisos': typeof AvisosRoute
   '/login': typeof LoginRoute
+  '/placas': typeof PlacasRoute
   '/puntos': typeof PuntosRoute
+  '/turnos': typeof TurnosRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/avisos': typeof AvisosRoute
   '/login': typeof LoginRoute
+  '/placas': typeof PlacasRoute
   '/puntos': typeof PuntosRoute
+  '/turnos': typeof TurnosRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/login' | '/puntos' | '/api/auth/$'
+  fullPaths:
+    | '/'
+    | '/avisos'
+    | '/login'
+    | '/placas'
+    | '/puntos'
+    | '/turnos'
+    | '/api/auth/$'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/login' | '/puntos' | '/api/auth/$'
-  id: '__root__' | '/' | '/login' | '/puntos' | '/api/auth/$'
+  to:
+    | '/'
+    | '/avisos'
+    | '/login'
+    | '/placas'
+    | '/puntos'
+    | '/turnos'
+    | '/api/auth/$'
+  id:
+    | '__root__'
+    | '/'
+    | '/avisos'
+    | '/login'
+    | '/placas'
+    | '/puntos'
+    | '/turnos'
+    | '/api/auth/$'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AvisosRoute: typeof AvisosRoute
   LoginRoute: typeof LoginRoute
+  PlacasRoute: typeof PlacasRoute
   PuntosRoute: typeof PuntosRoute
+  TurnosRoute: typeof TurnosRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
 }
 
@@ -78,6 +130,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/avisos': {
+      id: '/avisos'
+      path: '/avisos'
+      fullPath: '/avisos'
+      preLoaderRoute: typeof AvisosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/login': {
       id: '/login'
       path: '/login'
@@ -85,11 +144,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/placas': {
+      id: '/placas'
+      path: '/placas'
+      fullPath: '/placas'
+      preLoaderRoute: typeof PlacasRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/puntos': {
       id: '/puntos'
       path: '/puntos'
       fullPath: '/puntos'
       preLoaderRoute: typeof PuntosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/turnos': {
+      id: '/turnos'
+      path: '/turnos'
+      fullPath: '/turnos'
+      preLoaderRoute: typeof TurnosRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/auth/$': {
@@ -104,8 +177,11 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AvisosRoute: AvisosRoute,
   LoginRoute: LoginRoute,
+  PlacasRoute: PlacasRoute,
   PuntosRoute: PuntosRoute,
+  TurnosRoute: TurnosRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
 }
 export const routeTree = rootRouteImport

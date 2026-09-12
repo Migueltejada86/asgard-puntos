@@ -2,43 +2,8 @@ import { createServerFn } from "@tanstack/react-start";
 import { authMiddleware } from "@/lib/auth/middleware";
 import { getSql } from "@/lib/db";
 import { DEMO } from "@/lib/demo";
-
-export type DemoKind = "barber" | (typeof DEMO.clients)[number]["id"];
-
-export const demoEnter = createServerFn({ method: "POST" })
-  .validator((kind: DemoKind) => kind)
-  .handler(async ({ data: kind }) => {
-    const pack =
-      kind === "barber" ? DEMO.barber : DEMO.clients.find((c) => c.id === kind);
-    if (!pack) throw new Error("Cuenta de prueba inválida");
-    const { auth } = await import("@/lib/auth/server");
-    const { getRequest } = await import("@tanstack/react-start/server");
-    const headers = getRequest()?.headers;
-    const body = { email: pack.email, password: DEMO.password, name: pack.name };
-    try {
-      await auth.api.signInEmail({
-        body: { email: body.email, password: body.password },
-        headers,
-      });
-      return { ok: true as const };
-    } catch {
-      /* create on first use */
-    }
-    try {
-      await auth.api.signUpEmail({ body, headers });
-      return { ok: true as const };
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : "";
-      if (/already|exist/i.test(msg)) {
-        await auth.api.signInEmail({
-          body: { email: body.email, password: body.password },
-          headers,
-        });
-        return { ok: true as const };
-      }
-      throw new Error(msg || "No se pudo entrar con la cuenta de prueba");
-    }
-  });
+import { seedDemoReminders } from "@/lib/seed-reminders";
+import { SHOP, argentinaToday, toDay } from "@/lib/shop";
 
 export const ACTIONS = [
   { id: "corte", label: "Corte de pelo", points: 20 },
@@ -245,6 +210,19 @@ export const getClientHome = createServerFn({ method: "GET" })
     `;
     const client = clients[0];
     if (!client) throw new Error("No encontramos tu ficha");
+    try {
+      await seedDemoReminders(profile.shopId);
+    } catch {
+      /* seed de avisos es opcional para la ficha del cliente */
+    }
+    const extra = await sql<{
+      last_visit_at: unknown;
+      birthday_md: string | null;
+      preferred_barber: string | null;
+    }>`
+      select last_visit_at, birthday_md, preferred_barber
+      from clients where id = ${client.id} and shop_id = ${profile.shopId} limit 1
+    `;
     const prizes = await sql<PrizeRow>`
       select id, name, cost, detail from prizes where shop_id = ${profile.shopId} order by cost
     `;
@@ -253,36 +231,48 @@ export const getClientHome = createServerFn({ method: "GET" })
       from claims where shop_id = ${profile.shopId} and client_id = ${client.id}
       order by created_at desc
     `;
-    return { profile, client, prizes, claims };
+    const from = new Date().toISOString();
+    const upcomingRows = await sql<{
+      barber: string;
+      starts_at: string;
+      service: string;
+    }>`
+      select barber, starts_at, service
+      from appointments
+      where shop_id = ${profile.shopId}
+        and status = ${"booked"}
+        and starts_at >= ${from}::timestamptz
+        and (
+          client_user_id = ${context.userId}
+          or lower(client_name) = ${client.name.toLowerCase()}
+        )
+      order by starts_at
+      limit 1
+    `;
+    const lastVisit = toDay(extra[0]?.last_visit_at);
+    const recutDue = lastVisit
+      ? new Date(`${lastVisit}T12:00:00-03:00`).getTime() + SHOP.recutDays * 86400000 <= Date.now()
+      : false;
+    const { md } = argentinaToday();
+    const upcoming = upcomingRows[0]
+      ? {
+          barber: upcomingRows[0].barber,
+          startsAt: typeof upcomingRows[0].starts_at === "string" ? upcomingRows[0].starts_at : String(upcomingRows[0].starts_at),
+          service: upcomingRows[0].service,
+        }
+      : null;
+    return {
+      profile,
+      client,
+      prizes,
+      claims,
+      lastVisit,
+      recutDue,
+      birthdayToday: extra[0]?.birthday_md === md,
+      preferredBarber: extra[0]?.preferred_barber ?? null,
+      upcoming,
+    };
   });
-
-async function applyClaim(
-  shopId: string,
-  client: ClientRow,
-  prize: PrizeRow,
-  actorUserId: string,
-) {
-  const sql = await getSql();
-  if (client.points < prize.cost) throw new Error("Todavía no te alcanzan los puntos");
-  const pending = await sql<{ id: string }>`
-    select id from claims
-    where shop_id = ${shopId} and client_id = ${client.id} and prize_id = ${prize.id} and status = ${"pending"}
-    limit 1
-  `;
-  if (pending[0]) throw new Error("Ese premio ya está pendiente de canje");
-  const code = code6();
-  const claimId = crypto.randomUUID();
-  await sql`update clients set points = points - ${prize.cost} where id = ${client.id} and shop_id = ${shopId}`;
-  await sql`
-    insert into claims (id, shop_id, client_id, prize_id, prize_name, code, status)
-    values (${claimId}, ${shopId}, ${client.id}, ${prize.id}, ${prize.name}, ${code}, ${"pending"})
-  `;
-  await sql`
-    insert into ledger (id, shop_id, client_id, label, delta, actor_user_id)
-    values (${crypto.randomUUID()}, ${shopId}, ${client.id}, ${"Canje: " + prize.name}, ${-prize.cost}, ${actorUserId})
-  `;
-  return { code, prizeName: prize.name };
-}
 
 export const claimPrize = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
@@ -295,31 +285,29 @@ export const claimPrize = createServerFn({ method: "POST" })
       select id, dni, name, points from clients
       where shop_id = ${profile.shopId} and dni = ${profile.dni} limit 1
     `;
+    const client = clients[0];
     const prizes = await sql<PrizeRow>`select id, name, cost, detail from prizes where id = ${prizeId} and shop_id = ${profile.shopId} limit 1`;
-    const client = clients[0];
     const prize = prizes[0];
     if (!client || !prize) throw new Error("Premio no disponible");
-    return applyClaim(profile.shopId, client, prize, context.userId);
-  });
-
-export const redeemForClient = createServerFn({ method: "POST" })
-  .middleware([authMiddleware])
-  .validator((d: { dni: string; prizeId: string }) => ({ dni: cleanDni(d.dni), prizeId: d.prizeId }))
-  .handler(async ({ context, data }) => {
-    const profile = await loadProfile(context.userId);
-    if (!profile || profile.role !== "barber") throw new Error("Solo barberos");
-    const sql = await getSql();
-    const clients = await sql<ClientRow>`
-      select id, dni, name, points from clients
-      where shop_id = ${profile.shopId} and dni = ${data.dni} limit 1
+    if (client.points < prize.cost) throw new Error("Todavía no te alcanzan los puntos");
+    const pending = await sql<{ id: string }>`
+      select id from claims
+      where shop_id = ${profile.shopId} and client_id = ${client.id} and prize_id = ${prize.id} and status = ${"pending"}
+      limit 1
     `;
-    const prizes = await sql<PrizeRow>`
-      select id, name, cost, detail from prizes where id = ${data.prizeId} and shop_id = ${profile.shopId} limit 1
+    if (pending[0]) throw new Error("Ya tenés este premio pendiente de canje");
+    const code = code6();
+    const claimId = crypto.randomUUID();
+    await sql`update clients set points = points - ${prize.cost} where id = ${client.id} and shop_id = ${profile.shopId}`;
+    await sql`
+      insert into claims (id, shop_id, client_id, prize_id, prize_name, code, status)
+      values (${claimId}, ${profile.shopId}, ${client.id}, ${prize.id}, ${prize.name}, ${code}, ${"pending"})
     `;
-    const client = clients[0];
-    const prize = prizes[0];
-    if (!client || !prize) throw new Error("Premio no disponible");
-    return applyClaim(profile.shopId, client, prize, context.userId);
+    await sql`
+      insert into ledger (id, shop_id, client_id, label, delta, actor_user_id)
+      values (${crypto.randomUUID()}, ${profile.shopId}, ${client.id}, ${"Canje: " + prize.name}, ${-prize.cost}, ${context.userId})
+    `;
+    return { code, prizeName: prize.name };
   });
 
 export const lookupClient = createServerFn({ method: "POST" })
@@ -375,6 +363,12 @@ export const addPoints = createServerFn({ method: "POST" })
     const client = rows[0];
     if (!client) throw new Error("Cliente no encontrado. Registralo primero.");
     await sql`update clients set points = greatest(0, points + ${data.delta}) where id = ${client.id} and shop_id = ${profile.shopId}`;
+    if (data.delta > 0 && /corte|barba|combo|perfilado/i.test(data.label)) {
+      await sql`
+        update clients set last_visit_at = current_date, preferred_barber = ${profile.displayName}
+        where id = ${client.id} and shop_id = ${profile.shopId}
+      `;
+    }
     await sql`
       insert into ledger (id, shop_id, client_id, label, delta, actor_user_id)
       values (${crypto.randomUUID()}, ${profile.shopId}, ${client.id}, ${data.label || "Carga"}, ${data.delta}, ${context.userId})

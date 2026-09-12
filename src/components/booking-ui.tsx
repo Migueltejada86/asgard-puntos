@@ -11,6 +11,7 @@ import {
   type BarberName,
   type SlotRow,
 } from "@/lib/booking-api";
+import { barberWaShort } from "@/lib/shop";
 
 function todayISO() {
   const parts = new Intl.DateTimeFormat("en-CA", {
@@ -70,7 +71,7 @@ export function BookTurn({
   return (
     <Shell title="Reservar turno" onBack={onBack}>
       <Card className="space-y-4">
-        <p className="text-sm text-muted">Tres sillas: Marcelo, Ulises y Alexis. Un barbero, un turno por horario.</p>
+        <p className="text-sm text-muted">Tres sillas: Marcelo, Ulises y Alexis. Cada turno se manda al WhatsApp de esa silla.</p>
         <Field label="Servicio">
           <select className={inputClass} value={service} onChange={(e) => setService(e.target.value)}>
             {SERVICES.map((s) => (
@@ -156,7 +157,7 @@ export function BookTurn({
                     }`}
                   >
                     {b}
-                    {!ok ? <span className="block text-[10px]">ocupado</span> : null}
+                    <span className="mt-0.5 block text-[10px] text-muted">{ok ? barberWaShort(b) : "ocupado"}</span>
                   </button>
                 );
               })}
@@ -182,7 +183,11 @@ export function BookTurn({
               },
             })
               .then((r) => {
-                setMsg(`Listo: ${r.service} con ${r.barber} el ${r.date} a las ${r.time}`);
+                setMsg(`Listo: ${r.service} con ${r.barber} el ${r.date} a las ${r.time}. Le llega a ${r.barber} por WhatsApp.`);
+                if (r.whatsappUrl && !asBarber) {
+                  const win = window.open(r.whatsappUrl, "_blank", "noopener,noreferrer");
+                  if (win) win.opener = null;
+                }
                 setTime("");
                 setBarber("");
                 load();

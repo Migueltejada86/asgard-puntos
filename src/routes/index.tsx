@@ -3,6 +3,9 @@ import { useState } from "react";
 import { AsgardMark } from "@/components/asgard-mark";
 import { PublicBooking } from "@/components/public-booking";
 import { Card } from "@/components/shell";
+import { AskLocationButton } from "@/components/near-shop";
+import { BARBERS } from "@/lib/booking-api";
+import { BARBER_WA_LABEL, BARBER_WHATSAPP, SHOP, waLink } from "@/lib/shop";
 
 export const Route = createFileRoute("/")({ component: Landing });
 
@@ -22,6 +25,7 @@ function Landing() {
             <a href="#nosotros" className="hover:text-cream">Nosotros</a>
             <a href="#reservar" className="hover:text-cream">Contacto</a>
             <a href="#reservar" className="rounded-sm border border-primary px-4 py-2 font-semibold tracking-[0.16em] text-primary hover:bg-primary hover:text-primary-fg">Reservar</a>
+            <Link to="/placas" className="hover:text-cream">Placas QR</Link>
             <Link to="/login" search={{ rol: "barbero" }} className="rounded-sm border border-primary px-4 py-2 font-semibold tracking-[0.16em] text-primary hover:bg-primary hover:text-primary-fg">Puntos</Link>
           </nav>
           <button type="button" className="md:hidden" aria-label="Menú" onClick={() => setOpen((v) => !v)}>
@@ -36,6 +40,7 @@ function Landing() {
             <a href="#servicios" onClick={() => setOpen(false)}>Servicios</a>
             <a href="#nosotros" onClick={() => setOpen(false)}>Nosotros</a>
             <a href="#reservar" onClick={() => setOpen(false)}>Reservar</a>
+            <Link to="/placas" onClick={() => setOpen(false)}>Placas QR</Link>
             <Link to="/login" search={{ rol: "barbero" }} onClick={() => setOpen(false)} className="text-primary">Puntos</Link>
           </div>
         ) : null}
@@ -123,18 +128,43 @@ function Landing() {
           <div>
             <p className="text-xs tracking-[0.3em] text-primary uppercase">Reserva</p>
             <h2 className="mt-2 font-display text-3xl tracking-wide text-cream">Te esperamos</h2>
-            <p className="mt-3 text-sm text-muted">Belisario Roldán 340, Alta Gracia. Elegí barbero y horario: si Marcelo está a las 18:00, ese slot suyo queda cerrado.</p>
+            <p className="mt-3 text-sm text-muted">
+              Belisario Roldán 340, Alta Gracia. Elegí barbero y horario: el turno se manda al WhatsApp de esa silla.
+            </p>
             <div className="mt-6 space-y-3 text-sm">
               <p className="text-cream">Lunes a sábados · 9 a 13 y 17 a 21:30</p>
               <p>
-                <a className="text-primary underline" href="https://www.google.com/maps/search/?api=1&query=Belisario+Rold%C3%A1n+340,+Alta+Gracia,+C%C3%B3rdoba" target="_blank" rel="noreferrer">
+                <a className="text-primary underline" href={SHOP.maps} target="_blank" rel="noopener noreferrer">
                   Belisario Roldán 340, X5186 Alta Gracia
                 </a>
               </p>
               <p>
-                <a className="text-primary underline" href="https://wa.me/5493547612770" target="_blank" rel="noreferrer">
-                  WhatsApp +54 9 3547 61-2770
+                <a className="text-primary underline" href={SHOP.instagram} target="_blank" rel="noopener noreferrer">
+                  Instagram @asgard.est
                 </a>
+              </p>
+              <div className="space-y-1.5">
+                <p className="text-[10px] tracking-[0.16em] text-muted uppercase">WhatsApp de cada barbero</p>
+                {BARBERS.map((b) => (
+                  <p key={b}>
+                    <a
+                      className="text-primary underline"
+                      href={waLink(BARBER_WHATSAPP[b], `Hola ${b}! Quiero reservar un turno en ASGARD ESTUDIO.`)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      {b} {BARBER_WA_LABEL[b]}
+                    </a>
+                  </p>
+                ))}
+              </div>
+              <div className="pt-2">
+                <AskLocationButton />
+              </div>
+              <p>
+                <Link to="/placas" className="text-primary underline">
+                  Placas QR (Google, Instagram, WhatsApp, puntos)
+                </Link>
               </p>
             </div>
           </div>
