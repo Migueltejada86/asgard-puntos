@@ -9,7 +9,7 @@ export const DEMO = {
   barbers: [
     { email: "marcelo@asgardestudio.com", name: "Marcelo", phone: "5493547566940" },
     { email: "ulises@asgardestudio.com", name: "Ulises", phone: "5493547612770" },
-    { email: "alexis@asgardestudio.com", name: "Alexis", phone: "5493547578371" },
+    { email: "alexis@asgardestudio.com", name: "Alexis", phone: "5493547665135" },
   ],
   clients: [
     { id: "cli-sofia", email: "sofia@asgardestudio.com", dni: "35901876", name: "Sofía Herrera", points: 180 },

@@ -18,13 +18,13 @@ export const SHOP = {
 export const BARBER_WHATSAPP: Record<BarberName, string> = {
   Marcelo: "5493547566940",
   Ulises: "5493547612770",
-  Alexis: "5493547578371",
+  Alexis: "5493547665135",
 };
 
 export const BARBER_WA_LABEL: Record<BarberName, string> = {
   Marcelo: "+54 9 3547 56-6940",
   Ulises: "+54 9 3547 61-2770",
-  Alexis: "+54 9 3547 57-8371",
+  Alexis: "+54 9 3547 66-5135",
 };
 
 export function barberWaShort(barber: BarberName) {
